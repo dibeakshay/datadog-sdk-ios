@@ -8,6 +8,10 @@ import Foundation
 import OpenTelemetryApi
 
 internal class NOPOTelSpan: Span {
+    func setAttributes(_ attributes: [String : OpenTelemetryApi.AttributeValue]) {
+        //
+    }
+    
     var kind: OpenTelemetryApi.SpanKind = .internal
 
     var name: String = ""
