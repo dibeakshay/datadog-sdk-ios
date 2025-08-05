@@ -3,27 +3,7 @@
 import PackageDescription
 import Foundation
 
-// If the `OTEL_SWIFT` environment variable is set, `dd-sdk-ios` will be compiled against `OpenTelemetryApi`
-// from https://github.com/open-telemetry/opentelemetry-swift, which includes the full OpenTelemetry SDK.
-// Otherwise, it will use our lightweight mirror from https://github.com/DataDog/opentelemetry-swift-packages.
-//
-// This split is driven by feedback from https://github.com/DataDog/dd-sdk-ios/issues/1877, where
-// users reported that fetching the full OpenTelemetry SDK significantly increased dependency size.
-//
-// By using this environment variable, `dd-sdk-ios` consumers can choose whether to depend on the entire
-// OpenTelemetry SDK or just the API. This remains necessary until OpenTelemetry officially separates
-// the API and SDK packages (see https://github.com/open-telemetry/opentelemetry-swift/issues/486).
-let useOTelSwiftPackage = ProcessInfo.processInfo.environment["OTEL_SWIFT"] != nil
-
-let opentelemetry = useOTelSwiftPackage ?
-    (name: "opentelemetry-swift", url: "https://github.com/open-telemetry/opentelemetry-swift.git", version: Version("1.13.0")) :
-    (name: "opentelemetry-swift-packages", url: "https://github.com/DataDog/opentelemetry-swift-packages.git", version: Version("1.13.1"))
-
-// `dd-sdk-ios` supports a broader range of platform versions than `OpenTelemetryApi`.
-// When compiled in `OTEL_SWIFT` mode, we need to adjust the supported platforms accordingly.
-let platforms: [SupportedPlatform] = useOTelSwiftPackage ?
-    [.iOS(.v13), .tvOS(.v13), .macOS(.v12), .watchOS(.v7)] :
-    [.iOS(.v12), .tvOS(.v12), .macOS(.v12), .watchOS(.v7)]
+let platforms: [SupportedPlatform] = [.iOS(.v13), .tvOS(.v13), .macOS(.v12), .watchOS(.v7)]
 
 let internalSwiftSettings: [SwiftSetting] = ProcessInfo.processInfo.environment["DD_BENCHMARK"] != nil ?
     [.define("DD_BENCHMARK")] : []
@@ -53,21 +33,13 @@ let package = Package(
             targets: ["DatadogRUM"]
         ),
         .library(
-            name: "DatadogSessionReplay",
-            targets: ["DatadogSessionReplay"]
-        ),
-        .library(
             name: "DatadogCrashReporting",
             targets: ["DatadogCrashReporting"]
-        ),
-        .library(
-            name: "DatadogWebViewTracking",
-            targets: ["DatadogWebViewTracking"]
         ),
     ],
     dependencies: [
         .package(url: "https://github.com/microsoft/plcrashreporter.git", from: "1.12.0"),
-        .package(url: opentelemetry.url, exact: opentelemetry.version),
+        .package(url: "https://github.com/open-telemetry/opentelemetry-swift.git", exact: "2.0.0"),
     ],
     targets: [
         .target(
@@ -75,6 +47,13 @@ let package = Package(
             dependencies: [
                 .target(name: "DatadogInternal"),
                 .target(name: "DatadogPrivate"),
+                
+                .product(name: "OpenTelemetryApi", package: "opentelemetry-swift"),
+                .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift"),
+                .product(name: "ResourceExtension", package: "opentelemetry-swift"),
+                .product(name: "StdoutExporter", package: "opentelemetry-swift"),
+                .product(name: "URLSessionInstrumentation", package: "opentelemetry-swift"),
+                .product(name: "OpenTelemetryProtocolExporterHTTP", package: "opentelemetry-swift"),
             ],
             path: "DatadogCore",
             sources: ["Sources"],
@@ -127,12 +106,10 @@ let package = Package(
             ],
             path: "DatadogLogs/Tests"
         ),
-
         .target(
             name: "DatadogTrace",
             dependencies: [
                 .target(name: "DatadogInternal"),
-                .product(name: "OpenTelemetryApi", package: opentelemetry.name)
             ],
             path: "DatadogTrace/Sources"
         ),
@@ -187,39 +164,6 @@ let package = Package(
         ),
 
         .target(
-            name: "DatadogWebViewTracking",
-            dependencies: [
-                .target(name: "DatadogInternal"),
-            ],
-            path: "DatadogWebViewTracking/Sources"
-        ),
-        .testTarget(
-            name: "DatadogWebViewTrackingTests",
-            dependencies: [
-                .target(name: "DatadogWebViewTracking"),
-                .target(name: "TestUtilities"),
-            ],
-            path: "DatadogWebViewTracking/Tests"
-        ),
-
-        .target(
-            name: "DatadogSessionReplay",
-            dependencies: ["DatadogInternal"],
-            path: "DatadogSessionReplay/Sources"
-        ),
-        .testTarget(
-            name: "DatadogSessionReplayTests",
-            dependencies: [
-                .target(name: "DatadogSessionReplay"),
-                .target(name: "TestUtilities"),
-            ],
-            path: "DatadogSessionReplay/Tests",
-            resources: [
-                .process("Resources/Assets.xcassets")
-            ]
-        ),
-
-        .target(
             name: "TestUtilities",
             dependencies: [
                 .target(name: "DatadogCore"),
@@ -227,10 +171,8 @@ let package = Package(
                 .target(name: "DatadogInternal"),
                 .target(name: "DatadogLogs"),
                 .target(name: "DatadogRUM"),
-                .target(name: "DatadogSessionReplay"),
                 .target(name: "DatadogTrace"),
                 .target(name: "DatadogCrashReporting"),
-                .target(name: "DatadogWebViewTracking")
             ],
             path: "TestUtilities/Sources",
             swiftSettings: [.define("SPM_BUILD")] + internalSwiftSettings
