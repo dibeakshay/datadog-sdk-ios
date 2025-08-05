@@ -39,6 +39,14 @@ let package = Package(
             dependencies: [
                 .target(name: "DatadogInternal"),
                 .target(name: "DatadogPrivate"),
+                
+                // OpenTelemetry modules
+                .product(name: "OpenTelemetryApi", package: "opentelemetry-swift"),
+                .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift"),
+                .product(name: "OpenTelemetryProtocolExporterHttp", package: "opentelemetry-swift-packages"),
+                .product(name: "ResourceExtension", package: "opentelemetry-swift"),
+                .product(name: "StdoutExporter", package: "opentelemetry-swift"),
+                .product(name: "URLSessionInstrumentation", package: "opentelemetry-swift"),
             ],
             path: "DatadogCore",
             sources: ["Sources"],
